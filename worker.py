@@ -870,240 +870,255 @@ class FacebookLoginTestWorker(QThread):
             self.progress_updated.emit("🚀 Facebook giriş testi başlatılıyor...", "info")
             self.progress_percentage.emit(10)
             
-            # Import SeleniumBase
+            # Import SeleniumBase and global_browser
             from seleniumbase import SB
             import random
             import time
+            import global_browser
             
-            # Initialize browser with CDP mode
-            with SB(uc=True, test=True, locale="tr", ad_block=True, headless=False, maximize=True) as sb:
-                self.sb_instance = sb
-                
+            # Check if browser is already open
+            sb = global_browser.get_browser()
+            if sb:
+                self.progress_updated.emit("🌐 Mevcut tarayıcı oturumu kapatılıyor...", "info")
                 try:
-                    # Facebook ana sayfasına git
-                    self.progress_updated.emit("🌐 Facebook.com'a gidiliyor...", "info")
-                    sb.activate_cdp_mode("https://www.facebook.com/")
-                    self.progress_percentage.emit(20)
+                    sb.quit()
+                except:
+                    pass
+                global_browser.clear_browser()
+            
+            # Initialize browser WITHOUT context manager (we want to keep it alive)
+            sb = SB(uc=True, test=True, locale="tr", ad_block=True, headless=False, maximize=True)
+            sb.open("about:blank")
+            self.sb_instance = sb
+            
+            try:
+                # Facebook ana sayfasına git
+                self.progress_updated.emit("🌐 Facebook.com'a gidiliyor...", "info")
+                sb.activate_cdp_mode("https://www.facebook.com/")
+                self.progress_percentage.emit(20)
+                
+                # Sayfanın yüklenmesini bekle
+                self.progress_updated.emit("⏳ Sayfa yükleniyor...", "info")
+                sb.sleep(random.uniform(3, 5))
+                self.progress_percentage.emit(30)
+                
+                # Debug bilgilerini logla
+                self._debug_page_info(sb)
+                
+                # Cookie banner'ını kapat (varsa)
+                try:
+                    sb.cdp.click_if_visible('button[data-cookiebanner="accept_button"]')
+                    sb.sleep(1)
+                except:
+                    pass
+                
+                # Email alanını bul ve doldur
+                self.progress_updated.emit("📧 Email giriliyor...", "info")
+                email_selectors = [
+                    'input[name="email"]',
+                    'input[data-testid="royal-email"]',
+                    'input#email',
+                    'input[type="text"][placeholder*="mail"]',
+                    'input[type="email"]'
+                ]
+                
+                email_selector = None
+                for selector in email_selectors:
+                    try:
+                        if sb.cdp.is_element_visible(selector):
+                            email_selector = selector
+                            self.progress_updated.emit(f"✅ Email alanı bulundu: {selector}", "success")
+                            break
+                    except:
+                        continue
+                
+                if not email_selector:
+                    raise Exception("Email alanı bulunamadı!")
+                
+                sb.cdp.wait_for_element_visible(email_selector, timeout=10)
+                
+                # Alanı temizle ve focus yap
+                sb.cdp.click(email_selector)
+                sb.cdp.select_all(email_selector)
+                sb.sleep(random.uniform(0.3, 0.7))
+                
+                # İnsan gibi yazma simülasyonu
+                sb.cdp.press_keys(email_selector, email)
+                sb.sleep(random.uniform(0.5, 1.0))
+                
+                self.progress_percentage.emit(50)
+                
+                # Şifre alanını bul ve doldur
+                self.progress_updated.emit("🔐 Şifre giriliyor...", "info")
+                password_selectors = [
+                    'input[name="pass"]',
+                    'input[data-testid="royal-pass"]',
+                    'input#pass',
+                    'input[type="password"]'
+                ]
+                
+                password_selector = None
+                for selector in password_selectors:
+                    try:
+                        if sb.cdp.is_element_visible(selector):
+                            password_selector = selector
+                            self.progress_updated.emit(f"✅ Şifre alanı bulundu: {selector}", "success")
+                            break
+                    except:
+                        continue
+                
+                if not password_selector:
+                    raise Exception("Şifre alanı bulunamadı!")
+                
+                # Şifre alanına focus yap ve temizle
+                sb.cdp.click(password_selector)
+                sb.cdp.select_all(password_selector)
+                sb.sleep(random.uniform(0.3, 0.7))
+                
+                # İnsan gibi şifre yazma
+                sb.cdp.press_keys(password_selector, password)
+                sb.sleep(random.uniform(0.5, 1.0))
+                
+                self.progress_percentage.emit(70)
+                
+                # Giriş butonuna tıkla
+                self.progress_updated.emit("🔘 Giriş butonuna tıklanıyor...", "info")
+                login_selectors = [
+                    'button[name="login"]',
+                    'button[data-testid="royal-login-button"]',
+                    'button[type="submit"]',
+                    'input[type="submit"][value*="Giriş"]',
+                    'button:contains("Giriş")',
+                    'div[role="button"]:contains("Giriş")'
+                ]
+                
+                login_button = None
+                for selector in login_selectors:
+                    try:
+                        if sb.cdp.is_element_visible(selector):
+                            login_button = selector
+                            self.progress_updated.emit(f"✅ Giriş butonu bulundu: {selector}", "success")
+                            break
+                    except:
+                        continue
+                
+                if not login_button:
+                    raise Exception("Giriş butonu bulunamadı!")
+                
+                sb.cdp.click(login_button)
+                
+                # Manuel doğrulama için uzun bekleme süresi
+                wait_time = 30  # 30 saniye bekleme
+                self.progress_updated.emit("⏳ Giriş butonuna tıklandı, manuel doğrulama bekleniyor...", "info")
+                self.progress_updated.emit("🔐 2FA/CAPTCHA/Güvenlik kontrolü varsa lütfen manuel olarak tamamlayın...", "warning")
+                self.progress_updated.emit(f"⏰ {wait_time} saniye bekleme süresi başladı...", "info")
+                self.progress_updated.emit("💡 Bu süre içinde tarayıcıda gerekli doğrulamaları yapabilirsiniz", "info")
+                
+                # Belirlenen süre boyunca her saniye güncelleme
+                for i in range(wait_time):
+                    remaining = wait_time - i
+                    if remaining > 0:
+                        self.progress_updated.emit(f"⏳ Kalan süre: {remaining} saniye...", "info")
+                        # Progress bar'ı 70'den 85'e kadar güncelle
+                        progress = 70 + int((i / wait_time) * 15)
+                        self.progress_percentage.emit(progress)
+                    sb.sleep(1)
+                
+                self.progress_updated.emit("✅ Bekleme süresi tamamlandı, giriş durumu kontrol ediliyor...", "info")
+                self.progress_percentage.emit(85)
+                
+                # Giriş başarılı mı kontrol et
+                current_url = sb.get_current_url()
+                self.progress_updated.emit(f"🔍 Giriş sonrası URL: {current_url}", "info")
+                
+                # Birden fazla başarı kriteri kontrol et
+                success_indicators = [
+                    "facebook.com" in current_url and "login" not in current_url,
+                    "facebook.com" in current_url and ("home" in current_url or "feed" in current_url),
+                    current_url == "https://www.facebook.com/" or current_url == "https://facebook.com/"
+                ]
+                
+                # Sayfa elementlerini de kontrol et
+                try:
+                    # Ana sayfa elementlerini ara
+                    home_elements = [
+                        '[data-testid="Keycommand_wrapper_ModalLayer"]',
+                        '[role="main"]',
+                        '[data-testid="newsfeed"]',
+                        'div[role="banner"]',
+                        'nav[role="navigation"]'
+                    ]
                     
-                    # Sayfanın yüklenmesini bekle
-                    self.progress_updated.emit("⏳ Sayfa yükleniyor...", "info")
-                    sb.sleep(random.uniform(3, 5))
-                    self.progress_percentage.emit(30)
+                    element_found = False
+                    for element in home_elements:
+                        try:
+                            if sb.cdp.is_element_visible(element):
+                                self.progress_updated.emit(f"✅ Ana sayfa elementi bulundu: {element}", "success")
+                                element_found = True
+                                break
+                        except:
+                            continue
                     
-                    # Debug bilgilerini logla
+                    success_indicators.append(element_found)
+                except:
+                    pass
+                
+                if any(success_indicators):
+                    self.progress_updated.emit("✅ Giriş başarılı!", "success")
+                    
+                    # Cookie'leri kaydet
+                    cookie_file_path = self._save_cookies(sb, session_name, email)
+                    self.progress_percentage.emit(90)
+                    
+                    # Sayfaları keşfet
+                    self.progress_updated.emit("🔍 Facebook sayfaları keşfediliyor...", "info")
+                    discovered_pages = self._discover_facebook_pages(sb)
+                    
+                    if discovered_pages:
+                        self.pages_discovered.emit(discovered_pages)
+                        self.progress_updated.emit(f"✅ {len(discovered_pages)} sayfa keşfedildi!", "success")
+                    
+                    self.progress_percentage.emit(100)
+                    
+                    # Tarayıcıyı global olarak sakla
+                    import global_browser
+                    global_browser.set_browser(sb)
+                    
+                    self.login_completed.emit(True, "Giriş başarılı ve cookie'ler kaydedildi!", cookie_file_path)
+                    
+                    # Tarayıcıyı açık bırak - thread dönsün, browser global_browser'da tutulsun
+                    self.progress_updated.emit("🌐 Tarayıcı açık bırakıldı - Tüm Facebook işlemleri bu tarayıcıyı kullanacak!", "success")
+                    
+                    # Thread returns, browser stays alive managed by global_browser
+                else:
+                    self.progress_updated.emit("❌ Giriş başarısız - Kontroller başarısız", "error")
+                    # Debug için daha fazla bilgi
                     self._debug_page_info(sb)
-                    
-                    # Cookie banner'ını kapat (varsa)
+                    self.login_completed.emit(False, "Giriş başarısız - Lütfen bilgilerinizi kontrol edin", "")
                     try:
-                        sb.cdp.click_if_visible('button[data-cookiebanner="accept_button"]')
-                        sb.sleep(1)
+                        sb.quit()
                     except:
                         pass
-                    
-                    # Email alanını bul ve doldur
-                    self.progress_updated.emit("📧 Email giriliyor...", "info")
-                    email_selectors = [
-                        'input[name="email"]',
-                        'input[data-testid="royal-email"]',
-                        'input#email',
-                        'input[type="text"][placeholder*="mail"]',
-                        'input[type="email"]'
-                    ]
-                    
-                    email_selector = None
-                    for selector in email_selectors:
-                        try:
-                            if sb.cdp.is_element_visible(selector):
-                                email_selector = selector
-                                self.progress_updated.emit(f"✅ Email alanı bulundu: {selector}", "success")
-                                break
-                        except:
-                            continue
-                    
-                    if not email_selector:
-                        raise Exception("Email alanı bulunamadı!")
-                    
-                    sb.cdp.wait_for_element_visible(email_selector, timeout=10)
-                    
-                    # Alanı temizle ve focus yap
-                    sb.cdp.click(email_selector)
-                    sb.cdp.select_all(email_selector)
-                    sb.sleep(random.uniform(0.3, 0.7))
-                    
-                    # İnsan gibi yazma simülasyonu
-                    sb.cdp.press_keys(email_selector, email)
-                    sb.sleep(random.uniform(0.5, 1.0))
-                    
-                    self.progress_percentage.emit(50)
-                    
-                    # Şifre alanını bul ve doldur
-                    self.progress_updated.emit("🔐 Şifre giriliyor...", "info")
-                    password_selectors = [
-                        'input[name="pass"]',
-                        'input[data-testid="royal-pass"]',
-                        'input#pass',
-                        'input[type="password"]'
-                    ]
-                    
-                    password_selector = None
-                    for selector in password_selectors:
-                        try:
-                            if sb.cdp.is_element_visible(selector):
-                                password_selector = selector
-                                self.progress_updated.emit(f"✅ Şifre alanı bulundu: {selector}", "success")
-                                break
-                        except:
-                            continue
-                    
-                    if not password_selector:
-                        raise Exception("Şifre alanı bulunamadı!")
-                    
-                    # Şifre alanına focus yap ve temizle
-                    sb.cdp.click(password_selector)
-                    sb.cdp.select_all(password_selector)
-                    sb.sleep(random.uniform(0.3, 0.7))
-                    
-                    # İnsan gibi şifre yazma
-                    sb.cdp.press_keys(password_selector, password)
-                    sb.sleep(random.uniform(0.5, 1.0))
-                    
-                    self.progress_percentage.emit(70)
-                    
-                    # Giriş butonuna tıkla
-                    self.progress_updated.emit("🔘 Giriş butonuna tıklanıyor...", "info")
-                    login_selectors = [
-                        'button[name="login"]',
-                        'button[data-testid="royal-login-button"]',
-                        'button[type="submit"]',
-                        'input[type="submit"][value*="Giriş"]',
-                        'button:contains("Giriş")',
-                        'div[role="button"]:contains("Giriş")'
-                    ]
-                    
-                    login_button = None
-                    for selector in login_selectors:
-                        try:
-                            if sb.cdp.is_element_visible(selector):
-                                login_button = selector
-                                self.progress_updated.emit(f"✅ Giriş butonu bulundu: {selector}", "success")
-                                break
-                        except:
-                            continue
-                    
-                    if not login_button:
-                        raise Exception("Giriş butonu bulunamadı!")
-                    
-                    sb.cdp.click(login_button)
-                    
-                    # Manuel doğrulama için uzun bekleme süresi
-                    wait_time = 30  # 30 saniye bekleme
-                    self.progress_updated.emit("⏳ Giriş butonuna tıklandı, manuel doğrulama bekleniyor...", "info")
-                    self.progress_updated.emit("🔐 2FA/CAPTCHA/Güvenlik kontrolü varsa lütfen manuel olarak tamamlayın...", "warning")
-                    self.progress_updated.emit(f"⏰ {wait_time} saniye bekleme süresi başladı...", "info")
-                    self.progress_updated.emit("💡 Bu süre içinde tarayıcıda gerekli doğrulamaları yapabilirsiniz", "info")
-                    
-                    # Belirlenen süre boyunca her saniye güncelleme
-                    for i in range(wait_time):
-                        remaining = wait_time - i
-                        if remaining > 0:
-                            self.progress_updated.emit(f"⏳ Kalan süre: {remaining} saniye...", "info")
-                            # Progress bar'ı 70'den 85'e kadar güncelle
-                            progress = 70 + int((i / wait_time) * 15)
-                            self.progress_percentage.emit(progress)
-                        sb.sleep(1)
-                    
-                    self.progress_updated.emit("✅ Bekleme süresi tamamlandı, giriş durumu kontrol ediliyor...", "info")
-                    self.progress_percentage.emit(85)
-                    
-                    # Giriş başarılı mı kontrol et
-                    current_url = sb.get_current_url()
-                    self.progress_updated.emit(f"🔍 Giriş sonrası URL: {current_url}", "info")
-                    
-                    # Birden fazla başarı kriteri kontrol et
-                    success_indicators = [
-                        "facebook.com" in current_url and "login" not in current_url,
-                        "facebook.com" in current_url and ("home" in current_url or "feed" in current_url),
-                        current_url == "https://www.facebook.com/" or current_url == "https://facebook.com/"
-                    ]
-                    
-                    # Sayfa elementlerini de kontrol et
-                    try:
-                        # Ana sayfa elementlerini ara
-                        home_elements = [
-                            '[data-testid="Keycommand_wrapper_ModalLayer"]',
-                            '[role="main"]',
-                            '[data-testid="newsfeed"]',
-                            'div[role="banner"]',
-                            'nav[role="navigation"]'
-                        ]
                         
-                        element_found = False
-                        for element in home_elements:
-                            try:
-                                if sb.cdp.is_element_visible(element):
-                                    self.progress_updated.emit(f"✅ Ana sayfa elementi bulundu: {element}", "success")
-                                    element_found = True
-                                    break
-                            except:
-                                continue
-                        
-                        success_indicators.append(element_found)
-                    except:
-                        pass
-                    
-                    if any(success_indicators):
-                        self.progress_updated.emit("✅ Giriş başarılı!", "success")
-                        
-                        # Cookie'leri kaydet
-                        cookie_file_path = self._save_cookies(sb, session_name, email)
-                        self.progress_percentage.emit(90)
-                        
-                        # Sayfaları keşfet
-                        self.progress_updated.emit("🔍 Facebook sayfaları keşfediliyor...", "info")
-                        discovered_pages = self._discover_facebook_pages(sb)
-                        
-                        if discovered_pages:
-                            self.pages_discovered.emit(discovered_pages)
-                            self.progress_updated.emit(f"✅ {len(discovered_pages)} sayfa keşfedildi!", "success")
-                        
-                        self.progress_percentage.emit(100)
-                        
-                        # Tarayıcıyı global olarak sakla
-                        import global_browser
-                        global_browser.set_browser(sb)
-                        
-                        self.login_completed.emit(True, "Giriş başarılı ve cookie'ler kaydedildi!", cookie_file_path)
-                        
-                        # Tarayıcıyı açık bırak
-                        self.progress_updated.emit("🌐 Tarayıcı açık bırakıldı - Video yükleme için hazır!", "success")
-                        
-                        # Tarayıcının kapanmaması için sonsuz döngü
-                        while True:
-                            sb.sleep(10)  # 10 saniye bekle
-                            try:
-                                # Tarayıcının hala açık olup olmadığını kontrol et
-                                current_url = sb.get_current_url()
-                                if not current_url:
-                                    break
-                            except:
-                                # Tarayıcı kapatıldıysa döngüden çık
-                                self.progress_updated.emit("🔴 Tarayıcı kapatıldı", "warning")
-                                break
-                    else:
-                        self.progress_updated.emit("❌ Giriş başarısız - Kontroller başarısız", "error")
-                        # Debug için daha fazla bilgi
-                        self._debug_page_info(sb)
-                        self.login_completed.emit(False, "Giriş başarısız - Lütfen bilgilerinizi kontrol edin", "")
-                        
-                except Exception as e:
-                    self.progress_updated.emit(f"❌ Giriş hatası: {str(e)}", "error")
-                    self.login_completed.emit(False, str(e), "")
+            except Exception as e:
+                self.progress_updated.emit(f"❌ Giriş hatası: {str(e)}", "error")
+                self.login_completed.emit(False, str(e), "")
+                try:
+                    if 'sb' in locals():
+                        sb.quit()
+                except:
+                    pass
                     
         except Exception as e:
             self.progress_updated.emit(f"❌ Genel hata: {str(e)}", "error")
             import traceback
             self.progress_updated.emit(f"Hata detayı: {traceback.format_exc()}", "error")
             self.login_completed.emit(False, f"Giriş testi hatası: {str(e)}", "")
+            try:
+                if 'sb' in locals():
+                    sb.quit()
+            except:
+                pass
             
     def _debug_page_info(self, sb):
         """Debug page information"""
@@ -1220,236 +1235,251 @@ class FacebookCookieLoginWorker(QThread):
             import json
             import os
             import time
+            import global_browser
             
             if not os.path.exists(cookie_file):
                 self.login_completed.emit(False, "Cookie dosyası bulunamadı!")
                 return
-                
-            with SB(uc=True, test=True, locale="tr", ad_block=True, headless=False, maximize=True) as sb:
+            
+            # Check if browser is already open
+            sb = global_browser.get_browser()
+            if sb:
+                self.progress_updated.emit("🌐 Mevcut tarayıcı oturumu kapatılıyor...", "info")
                 try:
-                    # Facebook'a git
-                    self.progress_updated.emit("🌐 Facebook.com'a gidiliyor...", "info")
-                    sb.activate_cdp_mode("https://www.facebook.com/")
-                    self.progress_percentage.emit(30)
+                    sb.quit()
+                except:
+                    pass
+                global_browser.clear_browser()
+                
+            # Initialize browser WITHOUT context manager (we want to keep it alive)
+            sb = SB(uc=True, test=True, locale="tr", ad_block=True, headless=False, maximize=True)
+            sb.open("about:blank")
+            try:
+                # Facebook'a git
+                self.progress_updated.emit("🌐 Facebook.com'a gidiliyor...", "info")
+                sb.activate_cdp_mode("https://www.facebook.com/")
+                self.progress_percentage.emit(30)
+                
+                # Cookie'leri yükle
+                self.progress_updated.emit("🍪 Cookie'ler yükleniyor...", "info")
+                with open(cookie_file, 'r', encoding='utf-8') as f:
+                    cookie_data = json.load(f)
+                
+                # Yeni format kontrolü
+                if isinstance(cookie_data, dict) and 'cookies' in cookie_data:
+                    # Yeni format (metadata ile)
+                    cookies = cookie_data['cookies']
+                    session_name = cookie_data.get('session_name', 'Bilinmiyor')
+                    email = cookie_data.get('email', 'Bilinmiyor')
+                    saved_at = cookie_data.get('saved_at', 0)
+                    critical_cookies = cookie_data.get('critical_cookies', [])
                     
-                    # Cookie'leri yükle
-                    self.progress_updated.emit("🍪 Cookie'ler yükleniyor...", "info")
-                    with open(cookie_file, 'r', encoding='utf-8') as f:
-                        cookie_data = json.load(f)
+                    self.progress_updated.emit(f"📋 Session: {session_name} ({email})", "info")
+                    self.progress_updated.emit(f"🔑 Kritik cookie'ler: {critical_cookies}", "info")
                     
-                    # Yeni format kontrolü
-                    if isinstance(cookie_data, dict) and 'cookies' in cookie_data:
-                        # Yeni format (metadata ile)
-                        cookies = cookie_data['cookies']
-                        session_name = cookie_data.get('session_name', 'Bilinmiyor')
-                        email = cookie_data.get('email', 'Bilinmiyor')
-                        saved_at = cookie_data.get('saved_at', 0)
-                        critical_cookies = cookie_data.get('critical_cookies', [])
-                        
-                        self.progress_updated.emit(f"📋 Session: {session_name} ({email})", "info")
-                        self.progress_updated.emit(f"🔑 Kritik cookie'ler: {critical_cookies}", "info")
-                        
-                        # Cookie yaşını kontrol et
-                        if saved_at > 0:
-                            age_days = (time.time() - saved_at) / (24 * 3600)
-                            self.progress_updated.emit(f"📅 Cookie yaşı: {age_days:.1f} gün", "info")
-                            if age_days > 30:
-                                self.progress_updated.emit("⚠️ Cookie'ler 30 günden eski, sorun yaşanabilir", "warning")
-                    else:
-                        # Eski format (sadece cookie listesi)
-                        cookies = cookie_data
-                        self.progress_updated.emit("📋 Eski format cookie dosyası tespit edildi", "warning")
-                    
-                    # Cookie'leri tarayıcıya ekle
-                    self.progress_updated.emit(f"🍪 {len(cookies)} cookie yükleniyor...", "info")
-                    success_count = 0
-                    facebook_cookies = 0
-                    
-                    # Önce Facebook'a git (cookie yüklemek için)
-                    self.progress_updated.emit("🌐 Facebook domain'ine gidiliyor...", "info")
-                    sb.cdp.get("https://www.facebook.com/")
-                    sb.sleep(2)
-                    
-                    # Gelişmiş cookie yükleme sistemi (ornekfacebok.py'den)
-                    current_time = time.time()
-                    
-                    for i, cookie in enumerate(cookies):
-                        try:
-                            if isinstance(cookie, dict) and cookie.get('name') and cookie.get('value'):
-                                # Facebook cookie'si kontrolü
-                                domain = cookie.get('domain', '')
-                                if 'facebook.com' not in domain:
-                                    continue
+                    # Cookie yaşını kontrol et
+                    if saved_at > 0:
+                        age_days = (time.time() - saved_at) / (24 * 3600)
+                        self.progress_updated.emit(f"📅 Cookie yaşı: {age_days:.1f} gün", "info")
+                        if age_days > 30:
+                            self.progress_updated.emit("⚠️ Cookie'ler 30 günden eski, sorun yaşanabilir", "warning")
+                else:
+                    # Eski format (sadece cookie listesi)
+                    cookies = cookie_data
+                    self.progress_updated.emit("📋 Eski format cookie dosyası tespit edildi", "warning")
+                
+                # Cookie'leri tarayıcıya ekle
+                self.progress_updated.emit(f"🍪 {len(cookies)} cookie yükleniyor...", "info")
+                success_count = 0
+                facebook_cookies = 0
+                
+                # Önce Facebook'a git (cookie yüklemek için)
+                self.progress_updated.emit("🌐 Facebook domain'ine gidiliyor...", "info")
+                sb.cdp.get("https://www.facebook.com/")
+                sb.sleep(2)
+                
+                # Gelişmiş cookie yükleme sistemi (ornekfacebok.py'den)
+                current_time = time.time()
+                
+                for i, cookie in enumerate(cookies):
+                    try:
+                        if isinstance(cookie, dict) and cookie.get('name') and cookie.get('value'):
+                            # Facebook cookie'si kontrolü
+                            domain = cookie.get('domain', '')
+                            if 'facebook.com' not in domain:
+                                continue
+                            
+                            # Cookie süresini kontrol et
+                            expires = cookie.get('expires', 0)
+                            if expires != 0 and expires < current_time:
+                                self.progress_updated.emit(f"⚠️ Cookie süresi dolmuş: {cookie['name']}", "warning")
+                                continue
+                            
+                            facebook_cookies += 1
+                            
+                            # Yöntem 1: CDP ile yükle (daha güvenli)
+                            try:
+                                clean_cookie = {
+                                    'name': cookie['name'],
+                                    'value': cookie['value'],
+                                    'domain': cookie.get('domain', '.facebook.com'),
+                                    'path': cookie.get('path', '/'),
+                                    'secure': cookie.get('secure', True),
+                                    'httpOnly': cookie.get('httpOnly', False),
+                                    'sameSite': cookie.get('sameSite', 'Lax')
+                                }
                                 
-                                # Cookie süresini kontrol et
-                                expires = cookie.get('expires', 0)
-                                if expires != 0 and expires < current_time:
-                                    self.progress_updated.emit(f"⚠️ Cookie süresi dolmuş: {cookie['name']}", "warning")
-                                    continue
+                                if 'expires' in cookie and cookie['expires'] != 0:
+                                    clean_cookie['expires'] = cookie['expires']
                                 
-                                facebook_cookies += 1
+                                sb.cdp.set_all_cookies([clean_cookie])
                                 
-                                # Yöntem 1: CDP ile yükle (daha güvenli)
-                                try:
-                                    clean_cookie = {
-                                        'name': cookie['name'],
-                                        'value': cookie['value'],
-                                        'domain': cookie.get('domain', '.facebook.com'),
-                                        'path': cookie.get('path', '/'),
-                                        'secure': cookie.get('secure', True),
-                                        'httpOnly': cookie.get('httpOnly', False),
-                                        'sameSite': cookie.get('sameSite', 'Lax')
-                                    }
-                                    
-                                    if 'expires' in cookie and cookie['expires'] != 0:
-                                        clean_cookie['expires'] = cookie['expires']
-                                    
-                                    sb.cdp.set_all_cookies([clean_cookie])
-                                    
-                                except Exception as cdp_error:
-                                    self.progress_updated.emit(f"⚠️ CDP cookie yükleme hatası: {cookie['name']} - {str(cdp_error)}", "warning")
+                            except Exception as cdp_error:
+                                self.progress_updated.emit(f"⚠️ CDP cookie yükleme hatası: {cookie['name']} - {str(cdp_error)}", "warning")
+                            
+                            # Yöntem 2: JavaScript ile direkt yükle (daha etkili)
+                            try:
+                                # Cookie string'i güvenli şekilde oluştur
+                                cookie_value = cookie['value'].replace("'", "\\'").replace('"', '\\"')
+                                cookie_string = f"{cookie['name']}={cookie_value}"
                                 
-                                # Yöntem 2: JavaScript ile direkt yükle (daha etkili)
-                                try:
-                                    # Cookie string'i güvenli şekilde oluştur
-                                    cookie_value = cookie['value'].replace("'", "\\'").replace('"', '\\"')
-                                    cookie_string = f"{cookie['name']}={cookie_value}"
-                                    
-                                    # Domain ekle
-                                    if cookie.get('domain'):
-                                        cookie_string += f"; domain={cookie['domain']}"
-                                    
-                                    # Path ekle
-                                    if cookie.get('path'):
-                                        cookie_string += f"; path={cookie['path']}"
-                                    
-                                    # Secure flag
-                                    if cookie.get('secure'):
-                                        cookie_string += "; secure"
-                                    
-                                    # SameSite
-                                    if cookie.get('sameSite'):
-                                        cookie_string += f"; samesite={cookie['sameSite']}"
-                                    
-                                    # HttpOnly (JavaScript ile set edilemez ama deneyebiliriz)
-                                    js_code = f"document.cookie = '{cookie_string}'"
-                                    sb.execute_script(js_code)
-                                    
-                                except Exception as js_error:
-                                    self.progress_updated.emit(f"⚠️ JS cookie yükleme hatası: {cookie['name']} - {str(js_error)}", "warning")
+                                # Domain ekle
+                                if cookie.get('domain'):
+                                    cookie_string += f"; domain={cookie['domain']}"
                                 
-                                success_count += 1
-                                status = "🔑" if cookie['name'] in ['c_user', 'xs', 'datr', 'sb', 'fr'] else "✅"
-                                self.progress_updated.emit(f"{status} Cookie {i+1}: {cookie['name']}", "info")
+                                # Path ekle
+                                if cookie.get('path'):
+                                    cookie_string += f"; path={cookie['path']}"
                                 
-                        except Exception as cookie_error:
-                            self.progress_updated.emit(f"❌ Cookie {i+1} genel hatası: {str(cookie_error)}", "error")
-                            continue
-                    
-                    self.progress_updated.emit(f"✅ {success_count}/{len(cookies)} cookie yüklendi ({facebook_cookies} Facebook cookie'si)", "success")
-                    
-                    if facebook_cookies == 0:
-                        self.login_completed.emit(False, "Facebook cookie'si bulunamadı")
-                        return
-                    elif facebook_cookies < 4:
-                        self.progress_updated.emit("⚠️ Az sayıda Facebook cookie'si var, giriş başarısız olabilir", "warning")
-                    
-                    # Kritik cookie'lerin varlığını kontrol et
-                    critical_cookies = ['c_user', 'xs', 'datr']
-                    loaded_critical = []
-                    
-                    for cookie in cookies:
-                        if cookie.get('name') in critical_cookies and 'facebook.com' in cookie.get('domain', ''):
-                            loaded_critical.append(cookie['name'])
-                    
-                    self.progress_updated.emit(f"🔑 Kritik cookie'ler: {loaded_critical}", "info")
-                    
-                    if len(loaded_critical) < 2:
-                        self.progress_updated.emit("⚠️ Kritik cookie'ler eksik, giriş başarısız olabilir", "warning")
-                    
-                    self.progress_percentage.emit(60)
-                    
-                    # Cookie'ler yüklendikten sonra çoklu sayfa yenileme
-                    self.progress_updated.emit("🔄 Cookie'ler yüklendi, sayfa yenileniyor...", "info")
-                    sb.cdp.reload()
-                    sb.sleep(4)
-                    
-                    # İkinci yenileme (daha etkili)
-                    self.progress_updated.emit("🔄 İkinci yenileme yapılıyor...", "info")
-                    sb.cdp.get("https://www.facebook.com/")
-                    sb.sleep(3)
-                    
-                    # Cookie'lerin işlenmesi için uzun bekleme
-                    self.progress_updated.emit("⏳ Cookie'lerin işlenmesi bekleniyor...", "info")
-                    sb.sleep(5)
-                    
-                    self.progress_percentage.emit(80)
-                    
-                    # Giriş kontrolü
-                    current_url = sb.get_current_url()
-                    page_title = sb.get_title()
-                    self.progress_updated.emit(f"🔍 Cookie giriş sonrası URL: {current_url}", "info")
-                    self.progress_updated.emit(f"🔍 Sayfa başlığı: {page_title}", "info")
-                    
-                    # Giriş başarı kontrolü
-                    success_indicators = [
-                        "facebook.com" in current_url and "login" not in current_url,
-                        "facebook.com" in current_url and ("home" in current_url or "feed" in current_url),
-                        current_url == "https://www.facebook.com/" or current_url == "https://facebook.com/"
+                                # Secure flag
+                                if cookie.get('secure'):
+                                    cookie_string += "; secure"
+                                
+                                # SameSite
+                                if cookie.get('sameSite'):
+                                    cookie_string += f"; samesite={cookie['sameSite']}"
+                                
+                                # HttpOnly (JavaScript ile set edilemez ama deneyebiliriz)
+                                js_code = f"document.cookie = '{cookie_string}'"
+                                sb.execute_script(js_code)
+                                
+                            except Exception as js_error:
+                                self.progress_updated.emit(f"⚠️ JS cookie yükleme hatası: {cookie['name']} - {str(js_error)}", "warning")
+                            
+                            success_count += 1
+                            status = "🔑" if cookie['name'] in ['c_user', 'xs', 'datr', 'sb', 'fr'] else "✅"
+                            self.progress_updated.emit(f"{status} Cookie {i+1}: {cookie['name']}", "info")
+                            
+                    except Exception as cookie_error:
+                        self.progress_updated.emit(f"❌ Cookie {i+1} genel hatası: {str(cookie_error)}", "error")
+                        continue
+                
+                self.progress_updated.emit(f"✅ {success_count}/{len(cookies)} cookie yüklendi ({facebook_cookies} Facebook cookie'si)", "success")
+                
+                if facebook_cookies == 0:
+                    self.login_completed.emit(False, "Facebook cookie'si bulunamadı")
+                    return
+                elif facebook_cookies < 4:
+                    self.progress_updated.emit("⚠️ Az sayıda Facebook cookie'si var, giriş başarısız olabilir", "warning")
+                
+                # Kritik cookie'lerin varlığını kontrol et
+                critical_cookies = ['c_user', 'xs', 'datr']
+                loaded_critical = []
+                
+                for cookie in cookies:
+                    if cookie.get('name') in critical_cookies and 'facebook.com' in cookie.get('domain', ''):
+                        loaded_critical.append(cookie['name'])
+                
+                self.progress_updated.emit(f"🔑 Kritik cookie'ler: {loaded_critical}", "info")
+                
+                if len(loaded_critical) < 2:
+                    self.progress_updated.emit("⚠️ Kritik cookie'ler eksik, giriş başarısız olabilir", "warning")
+                
+                self.progress_percentage.emit(60)
+                
+                # Cookie'ler yüklendikten sonra sayfa yenileme
+                self.progress_updated.emit("🔄 Cookie'ler yüklendi, sayfa yenileniyor...", "info")
+                sb.cdp.reload()
+                sb.sleep(4)
+                
+                # Cookie'lerin işlenmesi için bekleme
+                self.progress_updated.emit("⏳ Cookie'lerin işlenmesi bekleniyor...", "info")
+                sb.sleep(3)
+                
+                self.progress_percentage.emit(80)
+                
+                # Giriş kontrolü
+                current_url = sb.get_current_url()
+                page_title = sb.get_title()
+                self.progress_updated.emit(f"🔍 Cookie giriş sonrası URL: {current_url}", "info")
+                self.progress_updated.emit(f"🔍 Sayfa başlığı: {page_title}", "info")
+                
+                # Giriş başarı kontrolü
+                success_indicators = [
+                    "facebook.com" in current_url and "login" not in current_url,
+                    "facebook.com" in current_url and ("home" in current_url or "feed" in current_url),
+                    current_url == "https://www.facebook.com/" or current_url == "https://facebook.com/"
+                ]
+                
+                # Sayfa elementlerini kontrol et
+                try:
+                    home_elements = [
+                        '[role="main"]',
+                        '[data-testid="newsfeed"]',
+                        'div[role="banner"]',
+                        'nav[role="navigation"]'
                     ]
                     
-                    # Sayfa elementlerini kontrol et
+                    element_found = False
+                    for element in home_elements:
+                        try:
+                            if sb.cdp.is_element_visible(element):
+                                self.progress_updated.emit(f"✅ Ana sayfa elementi bulundu: {element}", "success")
+                                element_found = True
+                                break
+                        except:
+                            continue
+                    
+                    success_indicators.append(element_found)
+                except:
+                    pass
+                
+                self.progress_percentage.emit(100)
+                
+                if any(success_indicators):
+                    # Store browser in global_browser for reuse
+                    global_browser.set_browser(sb)
+                    
+                    self.progress_updated.emit("✅ Cookie ile giriş başarılı!", "success")
+                    self.progress_updated.emit("🌐 Tarayıcı açık bırakıldı - Tüm Facebook işlemleri bu tarayıcıyı kullanacak", "info")
+                    self.login_completed.emit(True, "Cookie ile giriş başarılı! Tarayıcı açık bırakıldı.")
+                    
+                    # Keep thread alive but don't block (browser will stay open)
+                    # The browser will be managed by global_browser module
+                else:
+                    self.progress_updated.emit("❌ Cookie ile giriş başarısız", "error")
+                    self.login_completed.emit(False, "Cookie ile giriş başarısız - Cookie'ler geçersiz olabilir")
                     try:
-                        home_elements = [
-                            '[role="main"]',
-                            '[data-testid="newsfeed"]',
-                            'div[role="banner"]',
-                            'nav[role="navigation"]'
-                        ]
-                        
-                        element_found = False
-                        for element in home_elements:
-                            try:
-                                if sb.cdp.is_element_visible(element):
-                                    self.progress_updated.emit(f"✅ Ana sayfa elementi bulundu: {element}", "success")
-                                    element_found = True
-                                    break
-                            except:
-                                continue
-                        
-                        success_indicators.append(element_found)
+                        sb.quit()
                     except:
                         pass
-                    
-                    self.progress_percentage.emit(100)
-                    
-                    if any(success_indicators):
-                        self.progress_updated.emit("✅ Cookie ile giriş başarılı!", "success")
-                        self.login_completed.emit(True, "Cookie ile giriş başarılı! Tarayıcı açık bırakıldı.")
                         
-                        # Tarayıcıyı açık bırak
-                        self.progress_updated.emit("🌐 Tarayıcı açık bırakıldı - Manuel olarak kapatabilirsiniz", "info")
-                        
-                        # Tarayıcının kapanmaması için sonsuz döngü
-                        while True:
-                            time.sleep(10)
-                            try:
-                                current_url = sb.get_current_url()
-                                if not current_url:
-                                    break
-                            except:
-                                self.progress_updated.emit("🔴 Tarayıcı kapatıldı", "warning")
-                                break
-                    else:
-                        self.progress_updated.emit("❌ Cookie ile giriş başarısız", "error")
-                        self.login_completed.emit(False, "Cookie ile giriş başarısız - Cookie'ler geçersiz olabilir")
-                        
-                except Exception as e:
-                    self.progress_updated.emit(f"❌ Cookie giriş hatası: {str(e)}", "error")
-                    self.login_completed.emit(False, str(e))
+            except Exception as e:
+                self.progress_updated.emit(f"❌ Cookie giriş hatası: {str(e)}", "error")
+                self.login_completed.emit(False, str(e))
+                try:
+                    if 'sb' in locals():
+                        sb.quit()
+                except:
+                    pass
                     
         except Exception as e:
             self.progress_updated.emit(f"❌ Genel hata: {str(e)}", "error")
             import traceback
             self.progress_updated.emit(f"Hata detayı: {traceback.format_exc()}", "error")
             self.login_completed.emit(False, f"Cookie giriş hatası: {str(e)}")
+            try:
+                if 'sb' in locals():
+                    sb.quit()
+            except:
+                pass
