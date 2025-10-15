@@ -68,10 +68,6 @@ class MainWindow(QMainWindow):
         database_tab = self.create_database_tab()
         self.tab_widget.addTab(database_tab, "📊 Veritabanı")
         
-        # Create Facebook management tab
-        facebook_tab = self.create_facebook_management_tab()
-        self.tab_widget.addTab(facebook_tab, "📘 Facebook Yönetimi")
-        
         # Apply styles
         self.apply_styles()
         
@@ -155,152 +151,6 @@ class MainWindow(QMainWindow):
         
         return database_widget
         
-    def create_facebook_management_tab(self):
-        """Create the Facebook management tab"""
-        facebook_widget = QWidget()
-        facebook_layout = QVBoxLayout(facebook_widget)
-        
-        # Facebook Session Management Section
-        session_group = QGroupBox("Facebook Session Yönetimi")
-        session_layout = QVBoxLayout(session_group)
-        
-        # Session creation form
-        session_form_layout = QHBoxLayout()
-        
-        self.session_name_input = QLineEdit()
-        self.session_name_input.setPlaceholderText("Session adı (örn: Ana Hesap)")
-        session_form_layout.addWidget(QLabel("Session Adı:"))
-        session_form_layout.addWidget(self.session_name_input)
-        
-        self.session_email_input = QLineEdit()
-        self.session_email_input.setPlaceholderText("facebook@email.com")
-        session_form_layout.addWidget(QLabel("Email:"))
-        session_form_layout.addWidget(self.session_email_input)
-        
-        self.session_password_input = QLineEdit()
-        self.session_password_input.setEchoMode(QLineEdit.Password)
-        self.session_password_input.setPlaceholderText("Facebook şifresi")
-        session_form_layout.addWidget(QLabel("Şifre:"))
-        session_form_layout.addWidget(self.session_password_input)
-        
-        session_layout.addLayout(session_form_layout)
-        
-        # Session buttons
-        session_buttons_layout = QHBoxLayout()
-        
-        self.test_login_button = QPushButton("🔐 Giriş Testi")
-        self.test_login_button.setObjectName("primary_button")
-        session_buttons_layout.addWidget(self.test_login_button)
-        
-        self.save_session_button = QPushButton("💾 Session Kaydet")
-        self.save_session_button.setObjectName("secondary_button")
-        self.save_session_button.setEnabled(False)
-        session_buttons_layout.addWidget(self.save_session_button)
-        
-        self.get_pages_button = QPushButton("📄 Sayfaları Listele")
-        self.get_pages_button.setObjectName("secondary_button")
-        self.get_pages_button.setEnabled(False)
-        session_buttons_layout.addWidget(self.get_pages_button)
-        
-        session_buttons_layout.addStretch()
-        session_layout.addLayout(session_buttons_layout)
-        
-        facebook_layout.addWidget(session_group)
-        
-        # Cookie Login Section
-        cookie_group = QGroupBox("Cookie ile Giriş")
-        cookie_layout = QVBoxLayout(cookie_group)
-        
-        cookie_form_layout = QHBoxLayout()
-        
-        self.cookie_file_input = QLineEdit()
-        self.cookie_file_input.setPlaceholderText("Cookie dosya yolu...")
-        self.cookie_file_input.setReadOnly(True)
-        cookie_form_layout.addWidget(QLabel("Cookie Dosyası:"))
-        cookie_form_layout.addWidget(self.cookie_file_input)
-        
-        self.browse_cookie_button = QPushButton("📁 Dosya Seç")
-        self.browse_cookie_button.setObjectName("secondary_button")
-        cookie_form_layout.addWidget(self.browse_cookie_button)
-        
-        self.cookie_login_button = QPushButton("🍪 Cookie ile Giriş")
-        self.cookie_login_button.setObjectName("primary_button")
-        cookie_form_layout.addWidget(self.cookie_login_button)
-        
-        cookie_layout.addLayout(cookie_form_layout)
-        
-        facebook_layout.addWidget(cookie_group)
-        
-        # Sessions Table
-        sessions_group = QGroupBox("Kayıtlı Sessions")
-        sessions_group_layout = QVBoxLayout(sessions_group)
-        
-        self.sessions_table = QTableWidget()
-        self.sessions_table.setColumnCount(6)
-        self.sessions_table.setHorizontalHeaderLabels([
-            "ID", "Session Adı", "Email", "Son Giriş", "Durum", "İşlemler"
-        ])
-        
-        # Configure sessions table
-        sessions_header = self.sessions_table.horizontalHeader()
-        sessions_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        sessions_header.setSectionResizeMode(1, QHeaderView.Stretch)
-        sessions_header.setSectionResizeMode(2, QHeaderView.Stretch)
-        sessions_header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        sessions_header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
-        sessions_header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
-        
-        self.sessions_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        sessions_group_layout.addWidget(self.sessions_table)
-        
-        facebook_layout.addWidget(sessions_group)
-        
-        # Pages Table
-        pages_group = QGroupBox("Facebook Sayfaları")
-        pages_group_layout = QVBoxLayout(pages_group)
-        
-        # Page selection info
-        page_info_label = QLabel("💡 Reels yüklemek için bir sayfa seçin. Seçim yapmazsanız ana profil kullanılır.")
-        page_info_label.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
-        pages_group_layout.addWidget(page_info_label)
-        
-        self.pages_table = QTableWidget()
-        self.pages_table.setColumnCount(5)
-        self.pages_table.setHorizontalHeaderLabels([
-            "ID", "Sayfa Adı", "Sayfa ID", "URL", "Varsayılan"
-        ])
-        
-        # Configure pages table
-        pages_header = self.pages_table.horizontalHeader()
-        pages_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        pages_header.setSectionResizeMode(1, QHeaderView.Stretch)
-        pages_header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        pages_header.setSectionResizeMode(3, QHeaderView.Stretch)
-        pages_header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
-        
-        self.pages_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        pages_group_layout.addWidget(self.pages_table)
-        
-        # Selected page info
-        self.selected_page_label = QLabel("📄 Seçili sayfa: Henüz seçim yapılmadı")
-        self.selected_page_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
-        pages_group_layout.addWidget(self.selected_page_label)
-        
-        facebook_layout.addWidget(pages_group)
-        
-        # Connect Facebook management signals
-        self.test_login_button.clicked.connect(self.test_facebook_login)
-        self.save_session_button.clicked.connect(self.save_facebook_session)
-        self.get_pages_button.clicked.connect(self.get_facebook_pages)
-        self.browse_cookie_button.clicked.connect(self.browse_cookie_file)
-        self.cookie_login_button.clicked.connect(self.login_with_cookie)
-        self.pages_table.itemSelectionChanged.connect(self.on_page_selection_changed)
-        
-        # Load initial data
-        self.refresh_facebook_sessions()
-        
-        return facebook_widget
-        
     def show_video_context_menu(self, position):
         """Show context menu for video table"""
         if self.videos_table.itemAt(position) is None:
@@ -341,12 +191,9 @@ class MainWindow(QMainWindow):
             self.add_log_message("❌ Video dosyası bulunamadı!", "error")
             return
             
-        # Check if we have Facebook credentials
-        facebook_email = self.facebook_email_input.text().strip()
-        facebook_password = self.facebook_password_input.text().strip()
-        
-        if not facebook_email or not facebook_password:
-            self.add_log_message("❌ Facebook giriş bilgilerini girin!", "error")
+        # Check if we have a saved session
+        if not self.current_cookie_file:
+            self.add_log_message("❌ Önce Facebook'a cookie ile giriş yapın!", "error")
             return
             
         # Set current video info for upload
@@ -416,86 +263,6 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
             except Exception as e:
                 self.add_log_message(f"Video silme hatası: {str(e)}", "error")
                 
-    def test_facebook_login(self):
-        """Test Facebook login and save session"""
-        session_name = self.session_name_input.text().strip()
-        email = self.session_email_input.text().strip()
-        password = self.session_password_input.text().strip()
-        
-        if not all([session_name, email, password]):
-            self.add_log_message("❌ Tüm alanları doldurun!", "error")
-            return
-            
-        # Disable test button and show progress
-        self.test_login_button.setEnabled(False)
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
-        
-        self.add_log_message("🔐 Facebook giriş testi başlatılıyor...", "info")
-        
-        user_inputs = {
-            'session_name': session_name,
-            'email': email,
-            'password': password
-        }
-        
-        self.worker = FacebookLoginTestWorker(user_inputs)
-        self.worker.progress_updated.connect(self.add_log_message)
-        self.worker.progress_percentage.connect(self.progress_bar.setValue)
-        self.worker.login_completed.connect(self.on_facebook_login_completed)
-        self.worker.pages_discovered.connect(self.on_facebook_pages_discovered)
-        
-        self.worker.start()
-        
-    def save_facebook_session(self):
-        """Save Facebook session to database"""
-        session_name = self.session_name_input.text().strip()
-        email = self.session_email_input.text().strip()
-        
-        if not all([session_name, email]):
-            self.add_log_message("❌ Session adı ve email gerekli!", "error")
-            return
-            
-        if not hasattr(self, 'current_cookie_file') or not self.current_cookie_file:
-            self.add_log_message("❌ Önce giriş testi yapın!", "error")
-            return
-            
-        try:
-            # Save session to database
-            session_id = self.data_manager.save_facebook_session(
-                session_name, email, self.current_cookie_file
-            )
-            
-            if session_id:
-                self.add_log_message(f"✅ Session kaydedildi (ID: {session_id})", "success")
-                
-                # Save discovered pages if any
-                if hasattr(self, 'discovered_pages') and self.discovered_pages:
-                    for page in self.discovered_pages:
-                        is_default = page.get('type') == 'profile'
-                        page_id = self.data_manager.save_facebook_page(
-                            session_id, page['name'], page.get('id'), 
-                            page.get('url'), is_default
-                        )
-                        if page_id:
-                            self.add_log_message(f"📄 Sayfa kaydedildi: {page['name']}", "info")
-                
-                # Clear form and refresh tables
-                self.session_name_input.clear()
-                self.session_email_input.clear()
-                self.session_password_input.clear()
-                self.save_session_button.setEnabled(False)
-                self.get_pages_button.setEnabled(False)
-                
-                # Refresh tables
-                self.refresh_facebook_sessions()
-                
-            else:
-                self.add_log_message("❌ Session kaydedilemedi!", "error")
-                
-        except Exception as e:
-            self.add_log_message(f"Session kaydetme hatası: {str(e)}", "error")
-            
     def browse_cookie_file(self):
         """Browse for cookie file"""
         from PyQt5.QtWidgets import QFileDialog
@@ -530,6 +297,9 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
         
         self.add_log_message("🍪 Cookie ile giriş başlatılıyor...", "info")
         
+        # Store cookie file for later use
+        self.current_cookie_file = cookie_file
+        
         user_inputs = {
             'cookie_file': cookie_file,
             'login_type': 'cookie'
@@ -539,6 +309,7 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
         self.worker.progress_updated.connect(self.add_log_message)
         self.worker.progress_percentage.connect(self.progress_bar.setValue)
         self.worker.login_completed.connect(self.on_cookie_login_completed)
+        self.worker.pages_discovered.connect(self.on_facebook_pages_discovered)
         
         self.worker.start()
         
@@ -556,85 +327,6 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
         if self.worker:
             self.worker = None
         
-    def get_facebook_pages(self):
-        """Get Facebook pages for current session"""
-        if not hasattr(self, 'discovered_pages') or not self.discovered_pages:
-            self.add_log_message("❌ Önce giriş testi yapın ve sayfaları keşfedin!", "error")
-            return
-            
-        # Show discovered pages in table
-        self.pages_table.setRowCount(len(self.discovered_pages))
-        
-        for row, page in enumerate(self.discovered_pages):
-            self.pages_table.setItem(row, 0, QTableWidgetItem(str(row + 1)))
-            self.pages_table.setItem(row, 1, QTableWidgetItem(page['name']))
-            self.pages_table.setItem(row, 2, QTableWidgetItem(page.get('id', 'N/A')))
-            self.pages_table.setItem(row, 3, QTableWidgetItem(page.get('url', 'N/A')))
-            
-            # Default checkbox
-            default_text = "✅ Evet" if page.get('type') == 'profile' else "❌ Hayır"
-            self.pages_table.setItem(row, 4, QTableWidgetItem(default_text))
-            
-        self.add_log_message(f"📄 {len(self.discovered_pages)} sayfa tabloda gösteriliyor", "success")
-        
-    def refresh_facebook_sessions(self):
-        """Refresh Facebook sessions table"""
-        try:
-            sessions = self.data_manager.get_facebook_sessions()
-            
-            self.sessions_table.setRowCount(len(sessions))
-            
-            for row, session in enumerate(sessions):
-                self.sessions_table.setItem(row, 0, QTableWidgetItem(str(session['id'])))
-                self.sessions_table.setItem(row, 1, QTableWidgetItem(session['session_name']))
-                self.sessions_table.setItem(row, 2, QTableWidgetItem(session['email']))
-                
-                # Format last login
-                last_login = session['last_login'] or 'Hiç'
-                if last_login != 'Hiç':
-                    try:
-                        import datetime
-                        date_obj = datetime.datetime.fromisoformat(last_login.replace('Z', '+00:00'))
-                        last_login = date_obj.strftime("%d.%m.%Y %H:%M")
-                    except:
-                        pass
-                        
-                self.sessions_table.setItem(row, 3, QTableWidgetItem(last_login))
-                
-                # Status
-                status = "🟢 Aktif" if session['is_active'] else "🔴 Pasif"
-                self.sessions_table.setItem(row, 4, QTableWidgetItem(status))
-                
-                # Actions (placeholder)
-                self.sessions_table.setItem(row, 5, QTableWidgetItem("🔧 İşlemler"))
-                
-        except Exception as e:
-            self.add_log_message(f"Facebook sessions yenileme hatası: {str(e)}", "error")
-            
-    def on_facebook_login_completed(self, success, message, cookie_file_path):
-        """Handle Facebook login test completion"""
-        self.test_login_button.setEnabled(True)
-        self.progress_bar.setVisible(False)
-        
-        if success:
-            self.add_log_message(message, "success")
-            
-            # Enable save session button
-            self.save_session_button.setEnabled(True)
-            self.get_pages_button.setEnabled(True)
-            
-            # Store cookie file path for saving
-            self.current_cookie_file = cookie_file_path
-            
-            self.add_log_message("✅ Artık session'ı kaydedebilirsiniz!", "success")
-        else:
-            self.add_log_message(message, "error")
-            self.current_cookie_file = None
-            
-        # Clean up worker
-        if self.worker:
-            self.worker = None
-            
     def on_facebook_pages_discovered(self, pages):
         """Handle discovered Facebook pages"""
         self.discovered_pages = pages
@@ -669,18 +361,38 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
         
         left_layout.addWidget(tiktok_group)
         
-        # Facebook Credentials Section
-        facebook_group = QGroupBox("Facebook Giriş Bilgileri")
-        facebook_layout = QFormLayout(facebook_group)
+        # Facebook Cookie Login Section
+        facebook_group = QGroupBox("Facebook Cookie Girişi")
+        facebook_layout = QVBoxLayout(facebook_group)
         
-        self.facebook_email_input = QLineEdit()
-        self.facebook_email_input.setPlaceholderText("facebook@email.com")
-        facebook_layout.addRow("E-posta:", self.facebook_email_input)
+        # Cookie file selection
+        cookie_file_layout = QHBoxLayout()
         
-        self.facebook_password_input = QLineEdit()
-        self.facebook_password_input.setEchoMode(QLineEdit.Password)
-        self.facebook_password_input.setPlaceholderText("Şifrenizi girin")
-        facebook_layout.addRow("Şifre:", self.facebook_password_input)
+        self.cookie_file_input = QLineEdit()
+        self.cookie_file_input.setPlaceholderText("Cookie dosya yolu...")
+        self.cookie_file_input.setReadOnly(True)
+        cookie_file_layout.addWidget(QLabel("Cookie Dosyası:"))
+        cookie_file_layout.addWidget(self.cookie_file_input)
+        
+        self.browse_cookie_button = QPushButton("📁 Dosya Seç")
+        self.browse_cookie_button.setObjectName("secondary_button")
+        cookie_file_layout.addWidget(self.browse_cookie_button)
+        
+        facebook_layout.addLayout(cookie_file_layout)
+        
+        # Cookie login button
+        cookie_login_layout = QHBoxLayout()
+        self.cookie_login_button = QPushButton("🍪 Cookie ile Giriş")
+        self.cookie_login_button.setObjectName("primary_button")
+        cookie_login_layout.addWidget(self.cookie_login_button)
+        cookie_login_layout.addStretch()
+        
+        facebook_layout.addLayout(cookie_login_layout)
+        
+        # Selected page info
+        self.selected_page_label = QLabel("📄 Seçili sayfa: Henüz seçim yapılmadı")
+        self.selected_page_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
+        facebook_layout.addWidget(self.selected_page_label)
         
         left_layout.addWidget(facebook_group)
         
@@ -780,6 +492,35 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
         self.status_log.setPlaceholderText("İşlem günlüğü burada görünecek...")
         right_layout.addWidget(self.status_log)
         
+        # Facebook Pages Section
+        pages_label = QLabel("Facebook Sayfaları")
+        pages_label.setFont(QFont("Arial", 12, QFont.Bold))
+        right_layout.addWidget(pages_label)
+        
+        # Page selection info
+        page_info_label = QLabel("💡 Reels yüklemek için bir sayfa seçin. Seçim yapmazsanız ana profil kullanılır.")
+        page_info_label.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
+        page_info_label.setWordWrap(True)
+        right_layout.addWidget(page_info_label)
+        
+        self.pages_table = QTableWidget()
+        self.pages_table.setColumnCount(5)
+        self.pages_table.setHorizontalHeaderLabels([
+            "ID", "Sayfa Adı", "Sayfa ID", "URL", "Varsayılan"
+        ])
+        
+        # Configure pages table
+        pages_header = self.pages_table.horizontalHeader()
+        pages_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        pages_header.setSectionResizeMode(1, QHeaderView.Stretch)
+        pages_header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        pages_header.setSectionResizeMode(3, QHeaderView.Stretch)
+        pages_header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        
+        self.pages_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.pages_table.itemSelectionChanged.connect(self.on_page_selection_changed)
+        right_layout.addWidget(self.pages_table)
+        
         return right_widget
         
     def apply_styles(self):
@@ -856,6 +597,10 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
         self.download_button.clicked.connect(self.download_video)
         self.facebook_button.clicked.connect(self.upload_to_facebook)
         
+        # Cookie login connections
+        self.browse_cookie_button.clicked.connect(self.browse_cookie_file)
+        self.cookie_login_button.clicked.connect(self.login_with_cookie)
+        
         # Full automation and control buttons
         self.start_button.clicked.connect(self.start_automation)
         self.stop_button.clicked.connect(self.stop_automation)
@@ -907,8 +652,6 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
     def validate_inputs(self):
         """Validate user inputs before starting automation"""
         tiktok_url = self.tiktok_url_input.text().strip()
-        facebook_email = self.facebook_email_input.text().strip()
-        facebook_password = self.facebook_password_input.text().strip()
         
         if not tiktok_url:
             self.add_log_message("HATA: TikTok URL'si gerekli!", "error")
@@ -918,12 +661,8 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
             self.add_log_message("HATA: Geçerli bir TikTok URL'si girin!", "error")
             return False
             
-        if not facebook_email:
-            self.add_log_message("HATA: Facebook e-posta adresi gerekli!", "error")
-            return False
-            
-        if not facebook_password:
-            self.add_log_message("HATA: Facebook şifresi gerekli!", "error")
+        if not self.current_cookie_file:
+            self.add_log_message("HATA: Önce Facebook'a cookie ile giriş yapın!", "error")
             return False
             
         if self.enhance_content_checkbox.isChecked():
@@ -1349,8 +1088,7 @@ Facebook Yüklendi: {'Evet' if video.get('facebook_uploaded') else 'Hayır'}
         """Get all user inputs as a dictionary"""
         return {
             'tiktok_url': self.tiktok_url_input.text().strip(),
-            'facebook_email': self.facebook_email_input.text().strip(),
-            'facebook_password': self.facebook_password_input.text().strip(),
+            'cookie_file': self.current_cookie_file,
             'gemini_api_key': self.gemini_api_key_input.text().strip(),
             'enhance_content': self.enhance_content_checkbox.isChecked(),
             'headless_mode': self.headless_checkbox.isChecked(),
