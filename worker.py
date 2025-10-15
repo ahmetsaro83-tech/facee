@@ -859,6 +859,7 @@ class FacebookLoginTestWorker(QThread):
         super().__init__()
         self.user_inputs = user_inputs
         self.sb_instance = None
+        self.sb_context = None
         
     def run(self):
         """Run Facebook login test"""
@@ -887,9 +888,10 @@ class FacebookLoginTestWorker(QThread):
                 global_browser.clear_browser()
             
             # Initialize browser WITHOUT context manager (we want to keep it alive)
-            sb = SB(uc=True, test=True, locale="tr", ad_block=True, headless=False, maximize=True)
-            sb.open("about:blank")
+            sb_context = SB(uc=True, test=True, locale="tr", ad_block=True, headless=False, maximize=True)
+            sb = sb_context.__enter__()
             self.sb_instance = sb
+            self.sb_context = sb_context
             
             try:
                 # Facebook ana sayfasına git
@@ -1222,6 +1224,7 @@ class FacebookCookieLoginWorker(QThread):
     def __init__(self, user_inputs):
         super().__init__()
         self.user_inputs = user_inputs
+        self.sb_context = None
         
     def run(self):
         """Run cookie login process"""
@@ -1253,8 +1256,9 @@ class FacebookCookieLoginWorker(QThread):
                 global_browser.clear_browser()
                 
             # Initialize browser WITHOUT context manager (we want to keep it alive)
-            sb = SB(uc=True, test=True, locale="tr", ad_block=True, headless=False, maximize=True)
-            sb.open("about:blank")
+            sb_context = SB(uc=True, test=True, locale="tr", ad_block=True, headless=False, maximize=True)
+            sb = sb_context.__enter__()
+            self.sb_context = sb_context
             try:
                 # Facebook'a git
                 self.progress_updated.emit("🌐 Facebook.com'a gidiliyor...", "info")
