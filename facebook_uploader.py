@@ -38,8 +38,8 @@ class FacebookUploader:
             print("Facebook'a giriş yapılıyor...")
             
             # Initialize browser with CDP mode
-            sb = SB(uc=True, headless=self.headless, test=True, locale="tr", ad_block=True)
-            sb.open("about:blank")
+            sb_context = SB(uc=True, headless=self.headless, test=True, locale="tr", ad_block=True)
+            sb = sb_context.__enter__()
             sb.activate_cdp_mode("https://www.facebook.com/")
             
             # Wait for page to load
