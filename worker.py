@@ -1217,6 +1217,7 @@ class FacebookCookieLoginWorker(QThread):
     progress_updated = pyqtSignal(str, str)  # message, level
     progress_percentage = pyqtSignal(int)    # percentage (0-100)
     login_completed = pyqtSignal(bool, str)  # success, message
+    pages_discovered = pyqtSignal(list)      # discovered pages
     
     def __init__(self, user_inputs):
         super().__init__()
@@ -1451,6 +1452,36 @@ class FacebookCookieLoginWorker(QThread):
                     global_browser.set_browser(sb)
                     
                     self.progress_updated.emit("✅ Cookie ile giriş başarılı!", "success")
+                    
+                    # Discover Facebook pages
+                    self.progress_updated.emit("🔍 Facebook sayfaları keşfediliyor...", "info")
+                    try:
+                        from facebook_uploader import FacebookUploader
+                        uploader = FacebookUploader()
+                        discovered_pages = uploader.get_facebook_pages(sb)
+                        
+                        if discovered_pages:
+                            self.pages_discovered.emit(discovered_pages)
+                            self.progress_updated.emit(f"✅ {len(discovered_pages)} sayfa keşfedildi!", "success")
+                        else:
+                            self.progress_updated.emit("⚠️ Hiç sayfa bulunamadı, sadece ana profil kullanılabilir", "warning")
+                            # Add default profile
+                            default_pages = [{
+                                'name': 'Ana Profil',
+                                'type': 'profile',
+                                'url': 'https://www.facebook.com/me'
+                            }]
+                            self.pages_discovered.emit(default_pages)
+                    except Exception as page_error:
+                        self.progress_updated.emit(f"⚠️ Sayfa keşfi hatası: {str(page_error)}", "warning")
+                        # Add default profile on error
+                        default_pages = [{
+                            'name': 'Ana Profil',
+                            'type': 'profile',
+                            'url': 'https://www.facebook.com/me'
+                        }]
+                        self.pages_discovered.emit(default_pages)
+                    
                     self.progress_updated.emit("🌐 Tarayıcı açık bırakıldı - Tüm Facebook işlemleri bu tarayıcıyı kullanacak", "info")
                     self.login_completed.emit(True, "Cookie ile giriş başarılı! Tarayıcı açık bırakıldı.")
                     
