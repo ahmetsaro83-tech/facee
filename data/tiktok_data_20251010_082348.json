@@ -1,0 +1,11 @@
+{
+  "description": "",
+  "hashtags": [],
+  "duration": "",
+  "likes": "",
+  "comments": "",
+  "url": "https://www.tiktok.com/@burukhisler_/video/7558576126000401671",
+  "extracted_at": "2025-10-10T08:23:48.128826",
+  "scraping_successful": false,
+  "error": "'TikTokScraper' object has no attribute 'open_browser'"
+}

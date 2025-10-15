@@ -1,0 +1,10 @@
+## General Rules
+- The project is written in Python 3.10+.
+- **The GUI must be built using PyQt5.**
+- **Separate business logic from UI logic.** Long-running tasks must be executed in a separate `QThread` to prevent the UI from freezing.
+- All code should be modular and follow the single-responsibility principle.
+- Use seleniumbase for all browser automation tasks.
+- Use the `google-generativeai` library for Gemini API interactions.
+- Add comments and docstrings to explain complex functions.
+- All file paths and sensitive credentials must be read from a `config.py` file, not hardcoded.
+- Include robust error handling (try-except blocks) in all modules.
